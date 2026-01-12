@@ -76,6 +76,33 @@ def init_db():
             )
         ''')
 
+        # Table for user song/content ownership (Section C1)
+        # Maps users to owned songs/transcripts
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_song_ownership (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                song_id INTEGER NOT NULL,
+                added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                source TEXT,
+                UNIQUE(user_id, song_id),
+                FOREIGN KEY (song_id) REFERENCES transcripts (id) ON DELETE CASCADE
+            )
+        ''')
+
+        # Table for liked songs/transcripts (Section C2)
+        # Tracks songs/transcripts liked by a user
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_liked_songs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                song_id INTEGER NOT NULL,
+                liked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, song_id),
+                FOREIGN KEY (song_id) REFERENCES transcripts (id) ON DELETE CASCADE
+            )
+        ''')
+
         # Add a default folder if it doesn't exist
         cursor.execute("SELECT id FROM folders WHERE name = ?", ('Unorganized',))
         if cursor.fetchone() is None:
