@@ -68,4 +68,4 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## Author
 
 Jaspreet Jawanda  
-Email: jaspreetjawanda@proton.me
+Email: jaspreet@jjawanda.me
