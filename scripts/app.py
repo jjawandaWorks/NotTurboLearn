@@ -474,6 +474,126 @@ def queue_status():
     queued_count = queued_count_row[0] if queued_count_row else 0
     return jsonify({'processing_file': processing_file, 'queued_count': queued_count})
 
+# --- Helper function to get user ID from session ---
+def get_user_id():
+    """
+    Returns the current user's identifier from the session.
+    Creates a new identifier if one doesn't exist.
+    """
+    if 'user_id' not in session:
+        session['user_id'] = str(uuid.uuid4())
+    return session['user_id']
+
+# --- Liked Songs/Transcripts API Routes (Section C2) ---
+
+@app.route('/api/songs/<int:song_id>/liked', methods=['GET'])
+def get_liked_state(song_id):
+    """
+    GET /api/songs/{song_id}/liked
+    Returns whether the user has EVER liked the song/transcript.
+    Response: { "liked": true|false, "liked_at": timestamp|null }
+    """
+    user_id = get_user_id()
+    db = get_db()
+    
+    liked_row = db.execute(
+        "SELECT liked_at FROM user_liked_songs WHERE user_id = ? AND song_id = ?",
+        (user_id, song_id)
+    ).fetchone()
+    db.close()
+    
+    if liked_row:
+        return jsonify({
+            'liked': True,
+            'liked_at': liked_row['liked_at']
+        })
+    else:
+        return jsonify({
+            'liked': False,
+            'liked_at': None
+        })
+
+@app.route('/api/songs/<int:song_id>/like', methods=['POST'])
+def like_song(song_id):
+    """
+    POST /api/songs/{song_id}/like
+    Adds the song/transcript to user's liked list.
+    """
+    user_id = get_user_id()
+    db = get_db()
+    
+    try:
+        db.execute(
+            "INSERT OR IGNORE INTO user_liked_songs (user_id, song_id) VALUES (?, ?)",
+            (user_id, song_id)
+        )
+        db.commit()
+        
+        liked_row = db.execute(
+            "SELECT liked_at FROM user_liked_songs WHERE user_id = ? AND song_id = ?",
+            (user_id, song_id)
+        ).fetchone()
+        db.close()
+        
+        return jsonify({
+            'success': True,
+            'liked': True,
+            'liked_at': liked_row['liked_at'] if liked_row else None
+        })
+    except Exception as e:
+        db.close()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/songs/<int:song_id>/like', methods=['DELETE'])
+def unlike_song(song_id):
+    """
+    DELETE /api/songs/{song_id}/like
+    Removes the song/transcript from user's liked list.
+    """
+    user_id = get_user_id()
+    db = get_db()
+    
+    try:
+        db.execute(
+            "DELETE FROM user_liked_songs WHERE user_id = ? AND song_id = ?",
+            (user_id, song_id)
+        )
+        db.commit()
+        db.close()
+        
+        return jsonify({
+            'success': True,
+            'liked': False,
+            'liked_at': None
+        })
+    except Exception as e:
+        db.close()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/liked-songs', methods=['GET'])
+def get_all_liked_songs():
+    """
+    GET /api/liked-songs
+    Returns all songs/transcripts liked by the current user.
+    This is used for the "Liked Songs" filter in the playlist tab.
+    """
+    user_id = get_user_id()
+    db = get_db()
+    
+    liked_songs = db.execute("""
+        SELECT t.id, t.filename, t.created_at, t.folder_id, uls.liked_at
+        FROM user_liked_songs uls
+        JOIN transcripts t ON uls.song_id = t.id
+        WHERE uls.user_id = ?
+        ORDER BY uls.liked_at DESC
+    """, (user_id,)).fetchall()
+    db.close()
+    
+    return jsonify({
+        'liked_songs': [dict(song) for song in liked_songs],
+        'count': len(liked_songs)
+    })
+
 if __name__ == '__main__':
     from database import init_db
     init_db()

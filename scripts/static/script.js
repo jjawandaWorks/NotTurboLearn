@@ -20,6 +20,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.querySelector('.sidebar');
     const addFolderBtn = document.getElementById('add-folder-btn');
     const visualizer = document.getElementById('visualizer');
+    const likedList = document.getElementById('liked-list');
+    
+    // Like Button Elements
+    const likeBtn = document.getElementById('likeBtn');
+    const likeBtnText = document.getElementById('likeBtnText');
     
     // Move Modal Elements
     const moveModal = document.getElementById('move-modal');
@@ -41,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let transcriptToMove = null;
     let pollingInterval = null;
     let audioContext, analyser, dataArray, source, animationFrameId;
+    let isCurrentLiked = false;
 
     // --- Core Functions ---
     const loadHistory = async () => {
@@ -168,6 +174,9 @@ document.addEventListener('DOMContentLoaded', () => {
             renderChatHistory(data.chat_history);
             enableChat(true);
             
+            // Check liked state for this session
+            await checkLikedState(transcriptId);
+            
             document.querySelectorAll('.history-item').forEach(item => {
                 item.classList.toggle('active', item.dataset.id == transcriptId);
             });
@@ -176,6 +185,131 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             showLoader(false);
         }
+    };
+    
+    // --- Liked Songs/Sessions API Functions ---
+    const checkLikedState = async (songId) => {
+        try {
+            const response = await fetch(`/api/songs/${songId}/liked`);
+            if (!response.ok) throw new Error('Failed to check liked state');
+            const data = await response.json();
+            
+            isCurrentLiked = data.liked;
+            updateLikeButtonUI();
+            likeBtn.classList.remove('hidden');
+        } catch (error) {
+            console.error('Error checking liked state:', error);
+            likeBtn.classList.add('hidden');
+        }
+    };
+    
+    const toggleLike = async () => {
+        if (!currentTranscriptId) return;
+        
+        const method = isCurrentLiked ? 'DELETE' : 'POST';
+        try {
+            const response = await fetch(`/api/songs/${currentTranscriptId}/like`, {
+                method: method
+            });
+            if (!response.ok) throw new Error('Failed to update like state');
+            const data = await response.json();
+            
+            isCurrentLiked = data.liked;
+            updateLikeButtonUI();
+            
+            // Refresh liked songs list if it's visible
+            const likedTab = document.getElementById('liked');
+            if (likedTab && likedTab.classList.contains('active')) {
+                await loadLikedSongs();
+            }
+        } catch (error) {
+            console.error('Error toggling like:', error);
+        }
+    };
+    
+    const updateLikeButtonUI = () => {
+        if (isCurrentLiked) {
+            likeBtn.classList.add('liked');
+            likeBtnText.textContent = 'Liked';
+        } else {
+            likeBtn.classList.remove('liked');
+            likeBtnText.textContent = 'Like';
+        }
+    };
+    
+    const loadLikedSongs = async () => {
+        try {
+            const response = await fetch('/api/liked-songs');
+            if (!response.ok) throw new Error('Failed to load liked songs');
+            const data = await response.json();
+            
+            renderLikedSongs(data.liked_songs);
+        } catch (error) {
+            console.error('Error loading liked songs:', error);
+            likedList.innerHTML = '<div class="placeholder-content"><p>Failed to load liked sessions.</p></div>';
+        }
+    };
+    
+    const renderLikedSongs = (songs) => {
+        if (!songs || songs.length === 0) {
+            likedList.innerHTML = `
+                <div class="placeholder-content">
+                    <h3>No Liked Sessions</h3>
+                    <p>Sessions you like will appear here. Click the heart icon on any session to add it to your favorites.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        likedList.innerHTML = songs.map(song => `
+            <div class="liked-song-item" data-id="${song.id}">
+                <div class="liked-song-info">
+                    <div class="song-title">${song.filename || 'Recording'}</div>
+                    <div class="song-date">Liked: ${new Date(song.liked_at).toLocaleDateString()}</div>
+                </div>
+                <div class="liked-song-actions">
+                    <button class="unlike-btn" data-id="${song.id}" title="Remove from liked">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+        
+        // Add event listeners
+        likedList.querySelectorAll('.liked-song-item').forEach(item => {
+            const songInfo = item.querySelector('.liked-song-info');
+            if (songInfo) {
+                songInfo.addEventListener('click', () => {
+                    loadSession(parseInt(item.dataset.id));
+                });
+            }
+        });
+        
+        likedList.querySelectorAll('.unlike-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const songId = parseInt(btn.dataset.id);
+                try {
+                    const response = await fetch(`/api/songs/${songId}/like`, {
+                        method: 'DELETE'
+                    });
+                    if (!response.ok) throw new Error('Failed to unlike');
+                    
+                    // Update UI if current session is the one being unliked
+                    if (currentTranscriptId === songId) {
+                        isCurrentLiked = false;
+                        updateLikeButtonUI();
+                    }
+                    
+                    // Reload the liked songs list
+                    await loadLikedSongs();
+                } catch (error) {
+                    console.error('Error unliking song:', error);
+                }
+            });
+        });
     };
     
     const sendAudioForTranscription = (audioData, fileName) => {
@@ -560,13 +694,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Like button event listener
+    if (likeBtn) {
+        likeBtn.addEventListener('click', toggleLike);
+    }
+
     tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             tabBtns.forEach(b => b.classList.remove('active'));
             tabPanes.forEach(p => p.classList.remove('active'));
 
             btn.classList.add('active');
             document.getElementById(btn.dataset.tab).classList.add('active');
+            
+            // Load liked songs when switching to liked tab
+            if (btn.dataset.tab === 'liked') {
+                await loadLikedSongs();
+            }
         });
     });
 

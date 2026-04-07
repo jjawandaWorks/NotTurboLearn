@@ -1,20 +1,36 @@
 {
-  "short_name": "LectureScribe AI",
+  "short_name": "LectureScribe",
   "name": "LectureScribe AI",
+  "description": "Transform lecture recordings into clear, exam-ready notes with AI-powered transcription and chat assistant.",
   "icons": [
     {
       "src": "/static/images/icons/icon-192x192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
       "src": "/static/images/icons/icon-1024x1024.png",
       "type": "image/png",
-      "sizes": "1024x1024"
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/images/icons/icon-1024x1024.png",
+      "type": "image/png",
+      "sizes": "1024x1024",
+      "purpose": "any"
     }
   ],
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
   "background_color": "#000000",
-  "theme_color": "#007aff"
+  "theme_color": "#000000",
+  "categories": ["education", "productivity"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false
 }

@@ -2,16 +2,34 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>LectureScribe AI</title>
 
+    <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#007aff"/>
-
+    <meta name="theme-color" content="#000000">
+    
+    <!-- iOS PWA Configuration -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="LectureScribe AI">
+    <meta name="apple-mobile-web-app-title" content="LectureScribe">
     <link rel="apple-touch-icon" href="/static/images/icons/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/images/icons/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="/static/images/icons/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="/static/images/icons/icon-1024x1024.png">
+    
+    <!-- iOS Splash Screens -->
+    <link rel="apple-touch-startup-image" href="/static/images/icons/icon-1024x1024.png">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/images/icons/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/images/logo.png">
+    
+    <!-- Prevent phone number detection -->
+    <meta name="format-detection" content="telephone=no">
+    
+    <!-- App description for SEO -->
+    <meta name="description" content="Transform lecture recordings into clear, exam-ready notes with AI-powered transcription and chat assistant.">
 
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -55,6 +73,12 @@
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2h4v4h-4zM2 10h4v4H2zm16 0h4v4h-4zM10 18h4v4h-4zM6 6h4v4H6zm12 0h4v4h-4zM6 14h4v4H6zm12 0h4v4h-4z"/></svg>
                         <span>Status</span>
                     </button>
+                    <button id="likeBtn" class="like-btn hidden" title="Like this session">
+                        <svg class="heart-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                        </svg>
+                        <span id="likeBtnText">Like</span>
+                    </button>
                 </div>
             </header>
 
@@ -70,6 +94,7 @@
                 <button class="tab-btn active" data-tab="notes">Notes</button>
                 <button class="tab-btn" data-tab="transcription">Transcription</button>
                 <button class="tab-btn" data-tab="chat">Chat</button>
+                <button class="tab-btn" data-tab="liked">Liked</button>
             </div>
 
             <div class="tab-content">
@@ -78,6 +103,14 @@
                         <div class="placeholder-content">
                             <h3>Welcome to LectureScribe AI</h3>
                             <p>Record or upload a lecture to get started. Your AI-generated notes will appear here.</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="liked" class="tab-pane">
+                    <div id="liked-list" class="liked-songs-list">
+                        <div class="placeholder-content">
+                            <h3>Liked Sessions</h3>
+                            <p>Sessions you like will appear here. Click the heart icon on any session to add it to your favorites.</p>
                         </div>
                     </div>
                 </div>
